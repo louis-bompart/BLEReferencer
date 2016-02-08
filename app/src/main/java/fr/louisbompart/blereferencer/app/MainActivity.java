@@ -25,12 +25,12 @@ import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Scanner;
 
 public class MainActivity extends AppCompatActivity {
     private List<Chip> chips;
@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE = 100;
 
     private RecyclerView recyclerview;
-    private RecyclerView.Adapter adapter;
+    private ChipAdapter adapter;
     private RecyclerView.LayoutManager layoutManager;
 
     @Override
@@ -68,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
         layoutManager = new LinearLayoutManager(this);
         recyclerview.setLayoutManager(layoutManager);
         chips = new ArrayList<Chip>();
+        loadChips();
         adapter = new ChipAdapter(chips);
         recyclerview.setAdapter(adapter);
     }
@@ -98,9 +99,9 @@ public class MainActivity extends AppCompatActivity {
         // create Intent to take a picture and return control to the calling application
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
-        fileUri = getOutputMediaFileUri(MEDIA_TYPE_IMAGE); // create a file to save the image
+        fileUri = Uri.parse(getExternalFilesDir(null).toURI().toString()); // create a file to save the image
         intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri); // set the image file name
-
+        Log.i("HELLO","bug");
         // start the image capture Intent
         startActivityForResult(intent, CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE);
     }
@@ -164,13 +165,58 @@ public class MainActivity extends AppCompatActivity {
         }
         Frame frame = new Frame.Builder().setBitmap(myBitmap).build();
         SparseArray<Barcode> barcodes = detector.detect(frame);
+        if(barcodes.size()==0) {
+            myBitmap = null;
+            mediaFile.delete();
+            return;
+        }
         Barcode thisCode = barcodes.valueAt(0);
-        TextView txtView = (TextView) findViewById(R.id.txtContent);
-        txtView.setText(thisCode.rawValue);
         String string = thisCode.rawValue;
         String[] array = string.split("/");
-        chips.add(new Chip(array[0],array[1],array[2]));
+        Chip tmp = new Chip(array[0],array[1],array[2]);
+        saveChip(tmp);
+        chips.add(tmp);
+        adapter.add(tmp);
+        adapter.notifyDataSetChanged();
         myBitmap = null;
         mediaFile.delete();
+    }
+
+    private void saveChip(Chip input) {
+        File path = getExternalFilesDir(null);
+        File file = new File(path,"data");
+        InputStream is = new ByteArrayInputStream((input.toString()+"\n").getBytes());
+        try {
+            OutputStream os = new FileOutputStream(file,true);
+            byte[] data = new byte[is.available()];
+            is.read(data);
+            os.write(data);
+            is.close();
+            os.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Toast.makeText(MainActivity.this, "Chip added and saved", Toast.LENGTH_SHORT).show();
+    }
+
+    private void loadChips() {
+        File path = getExternalFilesDir(null);
+        File file = new File(path,"data");
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new BufferedInputStream(new FileInputStream(file))));
+            String line = null;
+            while ((line = reader.readLine())!=null) {
+                String[] array = line.split(",");
+                chips.add(new Chip(array[0],array[1],array[2]));
+            }
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 }

@@ -27,4 +27,9 @@ public class Chip {
     public String getMajor() {
         return major;
     }
+
+    @Override
+    public String toString() {
+        return serialNumber+","+major+","+minor;
+    }
 }

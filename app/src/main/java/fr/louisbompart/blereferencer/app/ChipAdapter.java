@@ -14,6 +14,10 @@ import java.util.List;
 public class ChipAdapter extends RecyclerView.Adapter<ChipAdapter.ViewHolder> {
     private List<Chip> mDataset;
 
+    public boolean add(Chip chip) {
+        return mDataset.add(chip);
+    }
+
     public static class ViewHolder extends RecyclerView.ViewHolder {
         // each data item is just a string in this case
         public TextView mSerialNumber;
